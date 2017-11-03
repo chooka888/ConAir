@@ -12,7 +12,7 @@
  * GND -- Ground
  * GPIO2 -- Base pin of NPN (NPN running 5v, through1K resistor and IR LED.
  * GPIO0 -- nothing
- * RX -- nothing
+ * RX -- nothing --
  ****************************************/
 
 #include <ESP8266WiFi.h>
