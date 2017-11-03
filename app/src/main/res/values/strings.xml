@@ -1,0 +1,28 @@
+<resources>
+    <string name="app_name">AirCon</string>
+    <string name="fan">Fan</string>
+    <string name="MQTT_CONN">tcp://192.168.0.228:1883</string>
+    <string name="message_selectAC">Please select an air conditioner.</string>
+    <string-array name="ac_mode">
+        <item>Auto</item>
+        <item>Cold</item>
+        <item>Dry</item>
+        <item>Fan</item>
+        <item>Hot</item>
+    </string-array>
+    <string-array name="ac_profile">
+        <item>Normal</item>
+        <item>Power</item>
+        <item>Eco</item>
+    </string-array>
+    <string-array name="air_conns">
+        <item>zoe_ac</item>
+        <item>alex_ac</item>
+        <item>lounge_ac</item>
+        <item>guest_ac</item>
+        <item>kitchen_ac</item>
+        <item>master_bed_ac</item>
+        <item>zone_1_ac</item>
+        <item>all</item>
+    </string-array>
+</resources>
