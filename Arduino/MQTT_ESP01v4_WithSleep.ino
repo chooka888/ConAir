@@ -58,18 +58,9 @@ int khz;
 #define HVAC_MITSUBISHI_HI_RPT_SPACE   17100 // Above original iremote limit
 
 long previousMillis = 0;
-long previousMillis2 = 0;
-long interval = 10000;
+long interval = 30000; //milliseconds before sleep - so 1000 = 1 sec
 
 byte data[19]; 
-
-// Memory pool for JSON object tree.
-//
-// Inside the brackets, 200 is the size of the pool in bytes,
-// If the JSON object is more complex, you need to increase that value.
-// See https://bblanchon.github.io/ArduinoJson/assistant/
-//StaticJsonBuffer<200> jsonBuffer;
-
 
 //method to establish wifi connection
 void setup_wifi() {
@@ -91,50 +82,20 @@ void callback(char* topic, byte* payload, unsigned int length){
 
   DynamicJsonBuffer  jsonBuffer(200);
 
-
   String sTopic(topic);
  
   //Payload to string
   String sMessy = (String)(char*)payload;
   String sMessage2 = sMessy.substring(0, length);
 
-  //debug messages
-  Serial.println("|");
-  Serial.println(sMessage2);
-  Serial.println("|");
-  //Serial.print(payload);
-
   //Check to see if the message should update the settings
   if(sTopic == mqttTopicThis ||sTopic == mqttTopicAll){
-    PublishString("debug","here");
-    //dumpString();
-
-    //debug
-    //PublishString("debug",sMessage2);
-    //char *cstring = (char *) payload; 
-
-    PublishString("debug","here2");
     
     //parse the json message
     JsonObject& root = jsonBuffer.parseObject(sMessage2);
 
-
-    // handle message arrived
-    //char inData[length];
-
-  
-
- //for(int i =0; i<length; i++){
-   //inData[(i)] = (char)payload[i];
- //}
-
- 
-//JsonObject& root = jsonBuffer.parseObject(inData); 
-
-PublishString("debug","here3");
-
     //Debug statement
-    PublishString("debug",root["on"]);
+    PublishString("debug",root[jsonOn]);
     PublishString("debug",root[jsonMode]);
     PublishString("debug",root[jsonProfile]);
     PublishString("debug",root[jsonTemp]);
@@ -142,60 +103,48 @@ PublishString("debug","here3");
     
     //Update all settings
     setSwitchAndMode(root);
-    PublishString("debug","here4");
     setTemp(root);
-    PublishString("debug","here5");
-    setProfileAndFan(root); //may have to add a profile "manual" to allow fan setting to work.
-    PublishString("debug","here6");
+    setProfileAndFan(root);
+
     //send the current settings out over IR
     sendHvacMitsubishiHI();
-    PublishString("debug","here7");
-
+    
     //Debug - dump out the HEX codes of what was sent.
     dumpString();
     
   }  
 
+  //double check topic is cleared
   sTopic = "";
     
 }
 
-//Debug method - to dump out the current HEX codes
-void dumpString(){
-  
-  String debugString;
-  for (int i = 0; i < 19; i++) {
-    debugString += String(data[i], HEX);
-  }
-  PublishString("debugverbose", debugString);
-}
-
 //Method to take JSON input and set HEX codes for On/off and mode based on the JSON input.
 void setSwitchAndMode(JsonObject& root){
-PublishString("debug","here3a");
+
   String sOn = root[jsonOn];
-  PublishString("debug","here3b");
+
   // Byte 6 & 7 - On / Off and mode
   if (sOn == "false") {
- PublishString("debug","here3b");
+ 
     //Switch Off in Auto mode
     data[5] = (byte) 0xFF; 
     data[6] = (byte) 0x00;
     
   } else {
-    PublishString("debug","here3c");
+
     //Switch On in the correct mode based on the json input
     setMode(root);
-    PublishString("debug","here3d");
+
   }
   
 }
 
 //Method to set ON mode based on JSON input
 void setMode(JsonObject& root){
-PublishString("debug","here3ca");
+
   String sMessage = root[jsonMode];
-PublishString("debug","here3cb");
+
   if (sMessage == "Auto"){data[5] = (byte) 0xF7; data[6] = (byte) 0x08; }
   else if (sMessage == "Cold"){ data[5] = (byte) 0xF6; data[6] = (byte) 0x09; }
   else if (sMessage == "Dry"){  data[5] = (byte) 0xF5; data[6] = (byte) 0x0A; }
@@ -215,8 +164,10 @@ void setProfileAndFan(JsonObject& root){
   
   // Profile to overrite - Byte 10 & 11
   if(sMessage == "NORMAL") { 
+    
     //Set the fan manually
     setFan(root);
+    
   } else if(sMessage == "ECO") {data[9] = (byte) 0xF9; data[10] = (byte) 0x06;}
   else if(sMessage == "POWER"){data[9] = (byte) 0xF3; data[10] = (byte) 0x0C;}
   else{
@@ -268,22 +219,20 @@ void reconnect(){
   while (!mqttClient.connected()){
     
     //attempt to connect
-    if (mqttClient.connect("zoeClient")){
+    if (mqttClient.connect("zoeClient")){ //replace with the specific name for the controller
  
       //Subscribe to the settings
-      mqttClient.subscribe("zoe_ac");
+      mqttClient.subscribe("zoe_ac"); //replace with the specific queue for the controller
       mqttClient.subscribe("all");
 
-      PublishString("help", "subscribed");
-      
     } else {
 
-      PublishString("help", "busted");
+
       Serial.print("failed, rc=");
       Serial.print(mqttClient.state());
       Serial.println(" , try again in 5 seconds...");
       //Signal & wait... 
-      //delay(5000);
+      delay(5000);
     }
   }
 }
@@ -336,39 +285,26 @@ void loop() {
  
   if (!mqttClient.connected()){
     reconnect();  
-    
   }
   mqttClient.loop(); 
 
-  // Non-blocking delay to slow down the temp refreshes to avoud flooding the MQTT client. 
-  // To be removed once the ESP sleep is in. 
-  //unsigned long currentMillis = millis();
-
-  //if (currentMillis - previousMillis > interval){
   
-    //previousMillis = currentMillis;
-    //if (mqttClient.connected()){
-      //Send dummy data to MQTT to signal it is alive
-      //PublishString("debug","MQTT still connected");
-    //}
-  //}
-
-  //TODO add ESP Deep sleep
-  //if (currentMillis - previousMillis2 > 50000){
+  //Loop to put the ESP into Deep sleep mode
+  unsigned long currentMillis = millis();
+  if (currentMillis - previousMillis > interval){
   
-    //previousMillis2 = currentMillis;
+    previousMillis = currentMillis;
     //Read values and publish to MQTT queues
     
     // Put the ESP NODEMCU to sleep to save power
-    //Serial.println("bedtime");
-    //PublishString("sleep","Bedtime");
-    //ESP.deepSleep(60 * 1000000, WAKE_RF_DEFAULT);// the 1000000 changes to seconds >> deepSleep for 1 minute
-    //PublishString("sleep","going to sleep now");
-    //delay(500);
+    PublishString("sleep","Bedtime");
+    ESP.deepSleep(60 * 1000000, WAKE_RF_DEFAULT);// the 1000000 changes to seconds >> deepSleep for 1 minute
+    PublishString("sleep","going to sleep now");
+    delay(500);
     //The ESP will go to sleep now and will send a timed signal via D0 (GPIO16) to RST
     //The ESP will then reset back into wake up mode
 
-  //}
+  }
   
 }
 
@@ -391,7 +327,7 @@ void PublishString(String sTopic, String sPayload){
 void sendHvacMitsubishiHI()
 {
 
-#define  HVAC_MITSUBISHI_DEBUG;  // Un comment to access DEBUG information through Serial Interface
+//#define  HVAC_MITSUBISHI_DEBUG;  // Uncomment to access DEBUG information through Serial Interface
 
 byte mask = 1; //our bitmask
 byte i;
@@ -425,12 +361,10 @@ byte i;
 
       //Compare the byte against the target bit using the mask. 
       if (data[i] & mask) { // Bit ONE
-        //Serial.print("1");
         mark(HVAC_MITSUBISHI_HI_BIT_MARK);
         space(HVAC_MITSUBISHI_HI_ONE_SPACE);
       }
       else { // Bit ZERO
-        //Serial.print("0");
         mark(HVAC_MITSUBISHI_HI_BIT_MARK);
         space(HVAC_MISTUBISHI_HI_ZERO_SPACE);
       }
@@ -481,5 +415,12 @@ void space(int time) {
   if (time > 0) delayMicroseconds(time);
 }
 
-
-
+//Debug method - to dump out the current HEX codes
+void dumpString(){
+  
+  String debugString;
+  for (int i = 0; i < 19; i++) {
+    debugString += String(data[i], HEX);
+  }
+  PublishString("debugverbose", debugString);
+}
