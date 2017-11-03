@@ -152,7 +152,6 @@ void setMode(JsonObject& root){
   else if (sMessage == "Hot"){  data[5] = (byte) 0xF3; data[6] = (byte) 0x0C; }
   else {//no match
   };
-  PublishString("debug","here3cd");
 
 }
 
