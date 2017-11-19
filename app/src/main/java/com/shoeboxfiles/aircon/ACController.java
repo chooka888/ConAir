@@ -19,6 +19,7 @@ import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.IMqttToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttClient;
+import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 
@@ -249,8 +250,13 @@ public class ACController extends AppCompatActivity {
         String clientId = MqttClient.generateClientId();
         client = new MqttAndroidClient(this.getApplicationContext(), connectionString, clientId);
 
+        //TODO: change username and password
+        MqttConnectOptions options = new MqttConnectOptions();
+        options.setUserName("***REMOVED***");
+        options.setPassword("***REMOVED***".toCharArray());
+
         try {
-            IMqttToken token = client.connect();
+            IMqttToken token = client.connect(options);
             token.setActionCallback(new IMqttActionListener() {
                 @Override
                 public void onSuccess(IMqttToken asyncActionToken) {
@@ -274,6 +280,9 @@ public class ACController extends AppCompatActivity {
                     // Something went wrong e.g. connection timeout or firewall problems
                     Log.d(TAG, "onFailure");
                 }
+
+
+
             });
 
 
@@ -323,7 +332,7 @@ public class ACController extends AppCompatActivity {
         client.setCallback(new MqttCallback() {
             @Override
             public void connectionLost(Throwable cause) {
-
+                msg("Connection lost...");
             }
 
             @Override

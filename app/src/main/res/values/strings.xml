@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">AirCon</string>
     <string name="fan">Fan</string>
-    <string name="MQTT_CONN">tcp://192.168.0.228:1883</string>
+    <string name="MQTT_CONN">tcp://192.168.0.233:1883</string>
     <string name="message_selectAC">Please select an air conditioner.</string>
     <string-array name="ac_mode">
         <item>Auto</item>
