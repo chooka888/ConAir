@@ -4,7 +4,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 /**
- * Created by ***REMOVED*** on 7/10/17.
+ * Created by chook on 7/10/17.
  */
 
 public class ACSetting {

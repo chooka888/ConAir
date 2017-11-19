@@ -2,8 +2,9 @@
 /*****************************************
  * 
  * 
- * This is the hackup to work on esp01
- * This script currently worked on the 1 Sept 2017. 
+ * This is the hackup to work on esp01 / WemosD1R2
+ * This script currently worked on the 19 Nov 2017. 
+ *
  * ESP01
  * tx -- nothing
  * CHPD -- +3.3v
@@ -12,7 +13,9 @@
  * GND -- Ground
  * GPIO2 -- Base pin of NPN (NPN running 5v, through1K resistor and IR LED.
  * GPIO0 -- nothing
- * RX -- nothing --
+ * RX -- nothing
+ *
+ * For Wemos I have base Pin of NPN on PIN D2. 
  ****************************************/
 
 #include <ESP8266WiFi.h>
@@ -21,16 +24,21 @@
 
 
 //WIFI Constants
-const char* ssid = "xxxxxxx";            //  SSID of LAN/WLAN
-const char* password = "xxxxx";        //  password
+const char* ssid = "xxxx";            //  SSID of LAN/WLAN
+const char* password = "xxxx";        //  password
 
 //MQTT constants
 const char* mqttServer = "192.168.0.xxx"; //TODO: replace with server name... 
 const int mqttPort = 1883;
+const char* mqttClientID = "zoeClient";
+const char* mqttUser = "xxxx";            //  UPDATE
+const char* mqttPassword = "xxxx!";        //  UPDATE
 
 //MQTT topic to subscribe to
 String mqttTopicThis = "zoe_ac"; //update this one for the individual unit
+const char* mqttTopicThisC = "zoe_ac";
 String mqttTopicAll= "all";
+const char* mqttTopicAllC= "all";
 
 //JSON object attributes
 const String jsonMode = "mode";
@@ -45,7 +53,7 @@ PubSubClient mqttClient(client);
 
 //Global IR Declarations 
 int halfPeriodicTime;
-int IRpin;
+int IRpin = D2; // 4 for NodeMCU board - 2 for esp01 // D2 for wemos board.
 int khz;
 
 // HVAC MITSUBISHI Heavy Industries IR Mark & Space timings
@@ -62,7 +70,7 @@ long interval = 30000; //milliseconds before sleep - so 1000 = 1 sec
 
 byte data[19]; 
 
-//method to establish wifi connection
+//method to establish wifi ion
 void setup_wifi() {
 
   delay(10);
@@ -108,10 +116,10 @@ void callback(char* topic, byte* payload, unsigned int length){
 
     //send the current settings out over IR
     sendHvacMitsubishiHI();
-    
+  
     //Debug - dump out the HEX codes of what was sent.
     dumpString();
-    
+
   }  
 
   //double check topic is cleared
@@ -152,7 +160,6 @@ void setMode(JsonObject& root){
   else if (sMessage == "Hot"){  data[5] = (byte) 0xF3; data[6] = (byte) 0x0C; }
   else {//no match
   };
-  PublishString("debug","here3cd");
 
 }
 
@@ -208,25 +215,25 @@ void setFan(JsonObject& root){
 
 }
 
-
-
 /*******************************************************
- * Function to connect the MQTT client using factory-ish pattern
+ * Function to  the MQTT client using factory-ish pattern
  */
 void reconnect(){
 
-  //loop until reconnected
+  //loop until reed
   while (!mqttClient.connected()){
     
-    //attempt to connect
-    if (mqttClient.connect("zoeClient")){ //replace with the specific name for the controller
+    //attempt to 
+    if (mqttClient.connect(mqttClientID, mqttUser, mqttPassword)){ //replace with the specific name for the controller
  
       //Subscribe to the settings
-      mqttClient.subscribe("zoe_ac"); //replace with the specific queue for the controller
-      mqttClient.subscribe("all");
+      mqttClient.subscribe(mqttTopicThisC,1); //replace with the specific queue for the controller
+      mqttClient.subscribe(mqttTopicAllC,1);
+
+      //debug message
+      PublishString("debug","logged in");
 
     } else {
-
 
       Serial.print("failed, rc=");
       Serial.print(mqttClient.state());
@@ -241,7 +248,6 @@ void reconnect(){
 void setup() {
 
   //Set IR PIN and PIN mode
-  IRpin=2; // 4 for NodeMCU board - 2 for esp01  
   khz=38;
   halfPeriodicTime = 500/khz;
   pinMode(IRpin, OUTPUT);
@@ -296,10 +302,11 @@ void loop() {
     previousMillis = currentMillis;
     //Read values and publish to MQTT queues
     
+    //Before putting the ESP to sleep, clear the retained message on the queue, to make sure on wake up it doesn't reprocess messages it already has processed.
+    clearRetainedMessage(mqttTopicThisC);
+    delay(100);
     // Put the ESP NODEMCU to sleep to save power
-    PublishString("sleep","Bedtime");
     ESP.deepSleep(60 * 1000000, WAKE_RF_DEFAULT);// the 1000000 changes to seconds >> deepSleep for 1 minute
-    PublishString("sleep","going to sleep now");
     delay(500);
     //The ESP will go to sleep now and will send a timed signal via D0 (GPIO16) to RST
     //The ESP will then reset back into wake up mode
@@ -317,6 +324,20 @@ void PublishString(String sTopic, String sPayload){
   sTopic.toCharArray(cTopic, sTopic.length() + 1);
   sPayload.toCharArray(cMessage, sPayload.length() + 1);
   mqttClient.publish(cTopic,cMessage);
+  
+}
+
+//Sends an empty retained message to clear the retained messages on the topic.
+void clearRetainedMessage(String sTopic){
+  String sPayload;
+  char cTopic[50];
+  char cMessage[0];
+  //Convert string to char array
+  sTopic.toCharArray(cTopic, sTopic.length() + 1);
+  sPayload.toCharArray(cMessage, sPayload.length() + 1);
+  
+  //Publish a zero byte message with retained flag set to clear the retained message on the queue
+  mqttClient.publish(cTopic,cMessage, true); 
   
 }
 
