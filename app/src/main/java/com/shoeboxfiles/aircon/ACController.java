@@ -252,8 +252,8 @@ public class ACController extends AppCompatActivity {
 
         //TODO: change username and password
         MqttConnectOptions options = new MqttConnectOptions();
-        options.setUserName("***REMOVED***");
-        options.setPassword("***REMOVED***".toCharArray());
+        options.setUserName("xxxx");
+        options.setPassword("xxxx".toCharArray());
 
         try {
             IMqttToken token = client.connect(options);
